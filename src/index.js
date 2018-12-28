@@ -1,7 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import httpplease from 'httpplease';
-import ieXDomain from 'httpplease/plugins/oldiexdomain';
 
 import {
   configurationError,
@@ -9,8 +7,6 @@ import {
   randomString, uniquifySVGIDs,
   unsupportedBrowserError,
 } from './utils';
-
-const http = httpplease.use(ieXDomain);
 
 const Status = {
   PENDING: 'pending',
@@ -105,36 +101,56 @@ export default class InlineSVG extends React.PureComponent {
 
     if (cacheGetRequests) {
       if (loadedIcons[src]) {
-        const [err, res] = loadedIcons[src];
+        const [err, text] = loadedIcons[src];
 
-        callback(err, res, true);
+        callback(err, text, true);
       }
 
       if (!getRequestsByUrl[src]) {
         getRequestsByUrl[src] = [];
 
-        http.get(src, (err, res) => {
-          getRequestsByUrl[src].forEach(cb => {
-            const { src: currentSrc } = this.props;
-            loadedIcons[src] = [err, res];
-
-            if (src === currentSrc) {
-              cb(err, res);
-            }
+        fetch(src).then(res => res.text())
+          .then(svgText => {
+            loadedIcons[src] = [null, svgText];
+            getRequestsByUrl[src].forEach(cb => {
+              const { src: currentSrc } = this.props;
+              if (src === currentSrc) {
+                cb(null, svgText);
+              }
+            });
+          }).catch(err => {
+            getRequestsByUrl[src].forEach(cb => {
+              const { src: currentSrc } = this.props;
+              if (src === currentSrc) {
+                cb(err);
+              }
+            });
           });
-        });
       }
 
       getRequestsByUrl[src].push(callback);
     }
     else {
-      http.get(src, (err, res) => {
-        const { src: currentSrc } = this.props;
+      fetch(src)
+        .then(response => {
+          if (response.ok) {
+            return response.text();
+          }
+          throw response;
+        })
+        .then(svgText => {
+          const { src: currentSrc } = this.props;
 
-        if (src === currentSrc) {
-          callback(err, res);
-        }
-      });
+          if (src === currentSrc) {
+            callback(null, svgText);
+          }
+        }).catch(err => {
+          const { src: currentSrc } = this.props;
+
+          if (src === currentSrc) {
+            callback(err);
+          }
+        });
     }
   }
 
@@ -166,15 +182,13 @@ export default class InlineSVG extends React.PureComponent {
     const match = src.match(/data:image\/svg[^,]*?(;base64)?,(.*)/);
 
     if (match) {
-      return this.handleLoad(null, {
-        text: match[1] ? atob(match[2]) : decodeURIComponent(match[2])
-      });
+      return this.handleLoad(null, match[1] ? atob(match[2]) : decodeURIComponent(match[2]));
     }
 
     return this.getFile(this.handleLoad);
   }
 
-  handleLoad = (err, res, isCached = false) => {
+  handleLoad = (err, text, isCached = false) => {
     const { onLoad, src } = this.props;
     if (err) {
       this.fail(err);
@@ -183,7 +197,7 @@ export default class InlineSVG extends React.PureComponent {
 
     if (this.isActive) {
       this.setState({
-        loadedText: res.text,
+        loadedText: text,
         status: Status.LOADED
       }, () => {
         onLoad(src, isCached);
@@ -205,7 +219,6 @@ export default class InlineSVG extends React.PureComponent {
 
   processSVG(svgText) {
     const { uniquifyIDs, uniqueHash, baseURL } = this.props;
-
     if (uniquifyIDs) {
       return uniquifySVGIDs(svgText, uniqueHash || randomString(), baseURL);
     }
