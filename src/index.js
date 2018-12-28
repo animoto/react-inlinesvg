@@ -1,7 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import httpplease from 'httpplease';
-import ieXDomain from 'httpplease/plugins/oldiexdomain';
 
 import {
   configurationError,
@@ -9,8 +7,6 @@ import {
   randomString, uniquifySVGIDs,
   unsupportedBrowserError,
 } from './utils';
-
-const http = httpplease.use(ieXDomain);
 
 const Status = {
   PENDING: 'pending',
@@ -104,36 +100,34 @@ export default class InlineSVG extends React.PureComponent {
     const { cacheGetRequests, src } = this.props;
 
     if (cacheGetRequests) {
-      if (loadedIcons[src]) {
-        const [err, res] = loadedIcons[src];
+      // if (loadedIcons[src]) {
+      //   const [err, res] = loadedIcons[src];
 
-        callback(err, res, true);
-      }
+      //   callback(err, res, true);
+      // }
 
-      if (!getRequestsByUrl[src]) {
-        getRequestsByUrl[src] = [];
+      // if (!getRequestsByUrl[src]) {
+      //   getRequestsByUrl[src] = [];
 
-        http.get(src, (err, res) => {
-          getRequestsByUrl[src].forEach(cb => {
-            const { src: currentSrc } = this.props;
-            loadedIcons[src] = [err, res];
+      //   http.get(src, (err, res) => {
+      //     getRequestsByUrl[src].forEach(cb => {
+      //       const { src: currentSrc } = this.props;
+      //       loadedIcons[src] = [err, res];
 
-            if (src === currentSrc) {
-              cb(err, res);
-            }
-          });
-        });
-      }
+      //       if (src === currentSrc) {
+      //         cb(err, res);
+      //       }
+      //     });
+      //   });
+      // }
 
-      getRequestsByUrl[src].push(callback);
+      // getRequestsByUrl[src].push(callback);
     }
     else {
-      http.get(src, (err, res) => {
-        const { src: currentSrc } = this.props;
-
-        if (src === currentSrc) {
-          callback(err, res);
-        }
+      fetch(src).then((res) => {
+        callback(null, res);
+      }).catch((err) => {
+        callback(err);
       });
     }
   }
