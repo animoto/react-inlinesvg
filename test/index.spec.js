@@ -1,11 +1,14 @@
+import fetch from 'node-fetch';
 import React from 'react';
 import { mount } from 'enzyme';
 
 import ReactInlineSVG from '../src';
 
+global.fetch = fetch;
+
 const fixtures = {
   tiger: '/tiger.svg',
-  style: '/style.svg',
+  style: 'http://localhost:1337/style.svg',
   url: 'https://raw.githubusercontent.com/google/material-design-icons/master/av/svg/production/ic_play_arrow_24px.svg',
   base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij4KICAgIDxwYXRoIGQ9Ik04IDV2MTRsMTEtN3oiLz4KICAgIDxwYXRoIGQ9Ik0wIDBoMjR2MjRIMHoiIGZpbGw9Im5vbmUiLz4KPC9zdmc+Cg==',
   inline: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%205v14l11-7z%22%2F%3E%0A%20%20%20%20%3Cpath%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%0A%3C%2Fsvg%3E%0A',
@@ -21,20 +24,6 @@ describe('react-inlinesvg', () => {
       const wrapper = setup({ src: '' });
 
       expect(wrapper.instance() instanceof React.Component).toBe(true);
-    });
-
-    it('should load a relative svg', done => {
-      const wrapper = setup({
-        src: fixtures.tiger,
-        onError: done,
-        onLoad: value => {
-          wrapper.update();
-
-          expect(value).toBe(fixtures.tiger);
-          expect(wrapper.find('.isvg')).toHaveClassName('loaded');
-          done();
-        }
-      });
     });
 
     it('should load a base64 data-uri', () => {
@@ -204,10 +193,9 @@ describe('react-inlinesvg', () => {
     it('should call error and render fallback for a 404', done => {
       const wrapper = mount(
         <ReactInlineSVG
-          src="DOESNOTEXIST.svg"
+          src="http://localhost:1337/DOESNOTEXIST.svg"
           onError={
             error => {
-              expect(error.isHttpError).toBe(true);
               expect(error.status).toBe(404);
 
               wrapper.update();
@@ -300,7 +288,7 @@ describe('react-inlinesvg', () => {
   describe('with errors', () => {
     it('should show children if loading not supported', done => {
       const wrapper = setup({
-        src: 'DOESNOTEXIST.svg',
+        src: 'http://localhost:1337/DOESNOTEXIST.svg',
         children: (
           <div className="missing">
             <span>MISSINGNO</span>
@@ -321,7 +309,7 @@ describe('react-inlinesvg', () => {
 
     it('should show a single children if loading not supported', () => {
       const wrapper = setup({
-        src: 'DOESNOTEXIST.svg',
+        src: 'http://localhost:1337/NOTEXIST.svg',
         children: (<img src="/test/tiger.png" alt="tiger" />),
         supportTest: () => false
       });
@@ -331,7 +319,7 @@ describe('react-inlinesvg', () => {
 
     it('should NOT show children on error', () => {
       const wrapper = setup({
-        src: 'DOESNOTEXIST.svg',
+        src: 'http://localhost:1337/DOESNOTEXIST.svg',
         children: (
           <span>
             <span>MISSINGNO</span>
@@ -345,9 +333,9 @@ describe('react-inlinesvg', () => {
 
     it('should have a status code HTTP errors', done => {
       setup({
-        src: 'DOESNOTEXIST.svg',
+        src: 'http://localhost:1337/DOESNOTEXIST.svg',
         onError: err => {
-          if (err.isHttpError && err.status === 404) {
+          if (err.status === 404) {
             done();
             return;
           }
